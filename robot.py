@@ -2,15 +2,27 @@
 TODO: You can either work from this skeleton, or you can build on your solution for Toy Robot 3 exercise.
 """
 
+import sys
+from world import obstacles
+
+# checks which type of argument the user passed in
+argument_lis = sys.argv
+
+if "turtle" == argument_lis[-1]:
+    from world.turtle import world
+else:
+    from world.text import world
+    
+
 # list of valid command names
 valid_commands = ['off', 'help', 'replay', 'forward', 'back', 'right', 'left', 'sprint']
 move_commands = valid_commands[3:]
 
-# variables tracking position and direction
-position_x = 0
-position_y = 0
-directions = ['forward', 'right', 'back', 'left']
-current_direction_index = 0
+# list of co_ordinates
+co_ordinates = []
+
+valid = False
+
 
 # area limit vars
 min_y, max_y = -200, 200
@@ -21,6 +33,10 @@ history = []
 
 
 def get_robot_name():
+    """
+    Request the robots name
+    returns the name.
+    """
     name = input("What do you want to name your robot? ")
     while len(name) == 0:
         name = input("What do you want to name your robot? ")
@@ -91,8 +107,13 @@ def valid_command(command):
 
 
 def output(name, message):
+    """Displays an introductory message and an exit message
+    returns the message.
+    """
+    
     print(''+name+": "+message)
-
+    return ''+name+": "+message
+    
 
 def do_help():
     """
@@ -111,48 +132,6 @@ REPLAY - replays all movement commands from history [FORWARD, BACK, RIGHT, LEFT,
 """
 
 
-def show_position(robot_name):
-    print(' > '+robot_name+' now at position ('+str(position_x)+','+str(position_y)+').')
-
-
-def is_position_allowed(new_x, new_y):
-    """
-    Checks if the new position will still fall within the max area limit
-    :param new_x: the new/proposed x position
-    :param new_y: the new/proposed y position
-    :return: True if allowed, i.e. it falls in the allowed area, else False
-    """
-
-    return min_x <= new_x <= max_x and min_y <= new_y <= max_y
-
-
-def update_position(steps):
-    """
-    Update the current x and y positions given the current direction, and specific nr of steps
-    :param steps:
-    :return: True if the position was updated, else False
-    """
-
-    global position_x, position_y
-    new_x = position_x
-    new_y = position_y
-
-    if directions[current_direction_index] == 'forward':
-        new_y = new_y + steps
-    elif directions[current_direction_index] == 'right':
-        new_x = new_x + steps
-    elif directions[current_direction_index] == 'back':
-        new_y = new_y - steps
-    elif directions[current_direction_index] == 'left':
-        new_x = new_x - steps
-
-    if is_position_allowed(new_x, new_y):
-        position_x = new_x
-        position_y = new_y
-        return True
-    return False
-
-
 def do_forward(robot_name, steps):
     """
     Moves the robot forward the number of steps
@@ -160,10 +139,15 @@ def do_forward(robot_name, steps):
     :param steps:
     :return: (True, forward output text)
     """
-    if update_position(steps):
+    global valid
+    valid ,status=world.update_position(steps,co_ordinates)
+
+    if valid and status == "correct":
         return True, ' > '+robot_name+' moved forward by '+str(steps)+' steps.'
-    else:
+    elif valid == False and status == "distance":
         return True, ''+robot_name+': Sorry, I cannot go outside my safe zone.'
+    else:
+        return True, status
 
 
 def do_back(robot_name, steps):
@@ -173,24 +157,27 @@ def do_back(robot_name, steps):
     :param steps:
     :return: (True, forward output text)
     """
+    global valid
+    valid ,status= world.update_position(-steps,co_ordinates)
 
-    if update_position(-steps):
+    if valid and status == "correct":
         return True, ' > '+robot_name+' moved back by '+str(steps)+' steps.'
-    else:
+    elif valid == False and status == "distance":
         return True, ''+robot_name+': Sorry, I cannot go outside my safe zone.'
+    else:
+        return True, status
 
-
+  
 def do_right_turn(robot_name):
     """
     Do a 90 degree turn to the right
     :param robot_name:
     :return: (True, right turn output text)
     """
-    global current_direction_index
 
-    current_direction_index += 1
-    if current_direction_index > 3:
-        current_direction_index = 0
+    world.current_direction_index += 1
+    if world.current_direction_index > 3:
+        world.current_direction_index = 0
 
     return True, ' > '+robot_name+' turned right.'
 
@@ -201,11 +188,10 @@ def do_left_turn(robot_name):
     :param robot_name:
     :return: (True, left turn output text)
     """
-    global current_direction_index
 
-    current_direction_index -= 1
-    if current_direction_index < 0:
-        current_direction_index = 3
+    world.current_direction_index -= 1
+    if world.current_direction_index < 0:
+        world.current_direction_index = 3
 
     return True, ' > '+robot_name+' turned left.'
 
@@ -251,7 +237,7 @@ def do_replay(robot_name, arguments):
     :param arguments a string containing arguments for the replay command
     :return: True, output string
     """
-
+    
     silent = arguments.lower().find('silent') > -1
     reverse = arguments.lower().find('reversed') > -1
     range_args = arguments.lower().replace('silent', '').replace('reversed', '')
@@ -273,12 +259,16 @@ def do_replay(robot_name, arguments):
         (do_next, command_output) = call_command(command_name, command_arg, robot_name)
         if not silent:
             print(command_output)
-            show_position(robot_name)
+            world.show_position(robot_name,command_name,command_arg,valid)
 
     return True, ' > '+robot_name+' replayed ' + str(len(commands_to_replay)) + ' commands' + (' in reverse' if reverse else '') + (' silently.' if silent else '.')
 
 
 def call_command(command_name, command_arg, robot_name):
+    """
+    Executes functions according to commands
+    returns a tuple of bool and statement.
+    """
     if command_name == 'help':
         return do_help()
     elif command_name == 'forward':
@@ -311,8 +301,9 @@ def handle_command(robot_name, command):
     else:
         (do_next, command_output) = call_command(command_name, arg, robot_name)
 
+
     print(command_output)
-    show_position(robot_name)
+    world.show_position(robot_name,command_name,arg,valid)
     add_to_history(command)
 
     return do_next
@@ -330,14 +321,18 @@ def add_to_history(command):
 def robot_start():
     """This is the entry point for starting my robot"""
 
-    global position_x, position_y, current_direction_index, history
-
+    global history,co_ordinates
+    co_ordinates = obstacles.get_obstacles()
     robot_name = get_robot_name()
-    output(robot_name, "Hello kiddo!")
+    
+    text_1 = output(robot_name, "Hello kiddo!")
+   
+    world.the_obstacles(co_ordinates,text_1)
+            
 
-    position_x = 0
-    position_y = 0
-    current_direction_index = 0
+    world.position_x = 0
+    world.position_y = 0
+    world.current_direction_index = 0
     history = []
 
     command = get_command(robot_name)

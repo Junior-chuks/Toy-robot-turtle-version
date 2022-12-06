@@ -573,11 +573,11 @@ There are some obstacles:
         self.assertTrue(test_result.wasSuccessful(), "unit tests should succeed")
 
     def test_unittest_obstacles_exist(self):
-        import test_obstacles 
+        import test_obstacles as test_obstacles 
         self.assertTrue('test_obstacles' in sys.modules, "test_obstacles module should be found")
 
     def test_unittest_succeeds(self):
-        import test_obstacles
+        import test_obstacles as test_obstacles
         test_result = run_unittests("test_obstacles")
         self.assertTrue(test_result.wasSuccessful(), "unit tests should succeed")
 
