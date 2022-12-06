@@ -27,7 +27,7 @@ def the_obstacles(co_ordinates,text):
         if i == co_ordinates[-1]:
             position_text+=f"- At position {i[0]},{i[1]} (to {x},{y})"
         else:
-            position_text+=f"- At position {i[0]},{i[1]} (to {x},{y})"+"\position_text"
+            position_text+=f"- At position {i[0]},{i[1]} (to {x},{y})"+"\n"
     if len(position_text)>0:
         print("There are some obstacles:")
         print(position_text)
